@@ -7,7 +7,7 @@ Features
 ========
 `bayleaf` will include:
 -  Univariate Models: Parametric and Semi-Parametric Survival Models
--  Mulivariate Models: Parametric and Semi-Parametric Frailty Models 
+-  Multivariate Models: Parametric and Semi-Parametric Frailty Models 
 -  Transformation Models
 -  Flexible Survival Models: Gaussian Process and Spline Regression Survival Models 
 -  Intuitive model specification syntax
