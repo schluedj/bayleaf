@@ -80,7 +80,7 @@ class Family(object):
     ## need to define this as likelihood
 #    link = tt.exp
 #    likelihood = Gamma_Censored
-#    parent = 'linear'#parameter that links the linear component to the
+#    parent = 'indep'#parameter that links the indep component to the
 #    priors = {}
 
 class Exponential(Family):
@@ -88,7 +88,7 @@ class Exponential(Family):
     ## need to define this as likelihood
     link = tt.exp
     likelihood = Exponential_Censored
-    parent = 'linear'#parameter that links the linear component to the
+    parent = 'indep'#parameter that links the indep component to the
     priors = {'alpha': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
 
 class Weibull(Family):
@@ -96,7 +96,7 @@ class Weibull(Family):
     ## need to define this as likelihood
     link = tt.exp
     likelihood = Weibull_Censored
-    parent = 'linear'#parameter that links the linear component to the
+    parent = 'indep'#parameter that links the indep component to the
     priors = {'alpha': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
 
 class Extreme_Value(Family):
@@ -104,7 +104,7 @@ class Extreme_Value(Family):
     ## need to define this as likelihood
     link = tt.exp
     likelihood = ExtremeValue_Censored
-    parent = 'linear'#parameter that links the linear component to the
+    parent = 'indep'#parameter that links the indep component to the
     priors = {'alpha': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
 
 class Weibull_PH(Family):
@@ -112,6 +112,6 @@ class Weibull_PH(Family):
     ## need to define this as likelihood
     link = tt.exp
     likelihood = WeibullPH
-    parent = 'linear'#parameter that links the linear component to the
+    parent = 'indep'#parameter that links the indep component to the
     priors = {'lam': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.),
               'alpha':pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
