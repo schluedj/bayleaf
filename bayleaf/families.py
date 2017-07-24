@@ -1,8 +1,9 @@
 ### Family storage for bayleaf
 ### Author: David Schlueter
+### David Schlueter
 ### Vanderbilt University Department of Biostatistics,
 ### File contains many hacks to GLM module in pymc3
-### July 10, 2017
+### July 21, 2017
 
 import theano.tensor as tt
 from pymc3.model import Model, Deterministic
