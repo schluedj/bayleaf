@@ -1,15 +1,11 @@
-# bayleaf
+# bayleaf 
 BAYesian Lifetime Event Analysis Framework
-
+`bayleaf` is a Python package for Bayesian survival analysis using [PyMC3](https://github.com/pymc-devs/pymc3).
 ### [Currently Under Construction]
-
-bayleaf is a Python package for Bayesian survival analysis using [PyMC3](https://github.com/pymc-devs/pymc3).
 
 Features 
 ========
-`bayleaf` includes ("imp": implemented and pushed, "comp": completed and about to be pushed, : "ip": in progress)
-
-:
+`bayleaf` includes ("imp": implemented and pushed, "comp": completed and about to be pushed, : "ip": in progress):
 -  Univariate Models: 
     1. Parametric: Weibull (imp), Exponential (imp), Extreme Value (imp)
     2. Semi-parametric: Piecewise hazard (comp) with Poisson Approximation
