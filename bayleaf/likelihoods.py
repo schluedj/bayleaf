@@ -91,29 +91,29 @@ class WeibullPH(PositiveContinuous):
         indep = tt.exp(indep)
         return event*(tt.log(alpha) + tt.log(lam) + tt.log(indep) + (alpha-1)*tt.log(value)) - (lam*indep * value**alpha)
 
-class ExtremeValue_Censored(PositiveContinuous):
+#class ExtremeValue_Censored(PositiveContinuous):
     
-        """
-        Extreme Value censored log-likelihood.
-        .. math::
-        ========  ====================================================
-        ========  ====================================================
-        Parameters
-        ----------
-        alpha : float
-            Shape parameter (alpha > 0).
-        """
-        
-    def __init__(self, alpha, indep, *args, **kwargs):
-        super(ExtremeValue_Censored, self).__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.indep = indep = tt.as_tensor_variable(indep)
+#        """
+#        Extreme Value censored log-likelihood.
+#        .. math::
+#        ========  ====================================================
+#        ========  ====================================================
+#        Parameters
+##        ----------
+#        alpha : float
+#            Shape parameter (alpha > 0).
+#        """
+
+#    def __init__(self, alpha, indep, *args, **kwargs):
+#        super(ExtremeValue_Censored, self).__init__(*args, **kwargs)
+#        self.alpha = alpha = tt.as_tensor_variable(alpha)
+#        self.indep = indep = tt.as_tensor_variable(indep)
 
     # Extreme Value survival likelihood, accounting for censoring
-    def logp(self, value, event):
-        indep = self.indep
-        alpha = self.alpha
-        return event*(tt.log(alpha)+(alpha*value)+indep) - tt.exp(indep+alpha*value)
+#    def logp(self, value, event):
+#        indep = self.indep
+#        alpha = self.alpha
+#        return event*(tt.log(alpha)+(alpha*value)+indep) - tt.exp(indep+alpha*value)
 
 #### TO ADD:  Gamma, Log-Normal
 

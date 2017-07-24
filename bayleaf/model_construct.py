@@ -25,8 +25,8 @@ from pymc3 import distributions as pm_dists
 FLOAT_EPS = np.finfo(float).eps
 import pymc3 as pm
 
-from . import likelihoods
-from . import families
+from .likelihoods import *
+from .families import *
 
 
 
@@ -62,7 +62,7 @@ class IndependentComponent(Model):
 
     def __init__(self, x, y, e, intercept=True, labels=None,
                  priors=None, vars=None, name='', model=None):
-        super(LinearComponent, self).__init__(name, model)
+        super(IndependentComponent, self).__init__(name, model)
         if priors is None:
             priors = {}
         if vars is None:
@@ -135,10 +135,10 @@ class ParSurv(IndependentComponent):
             priors=priors, vars=vars, name=name, model=model
         )
         _families = dict(
-            weibullph = Weibull_PH,
+            #weibullph = Weibull_PH,
             weibull = Weibull,
             exponential = Exponential,
-            extremevalue = Extreme_Value
+            #extremevalue = Extreme_Value
         )
         if isinstance(family, str):
             family = _families[family]()

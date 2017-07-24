@@ -1,6 +1,7 @@
 # bayleaf
 BAYesian Lifetime Event Analysis Framework
-###[Currently Under Construction]
+
+### [Currently Under Construction]
 
 bayleaf is a Python package for Bayesian survival analysis using [PyMC3](https://github.com/pymc-devs/pymc3).
 

@@ -14,6 +14,8 @@ from . import likelihoods
 from .likelihoods import *
 #from .likelihoods import ExtremeValue_Censored
 from pymc3.model import modelcontext
+import numbers
+
 FLOAT_EPS = np.finfo(float).eps
 
 class Family(object):
