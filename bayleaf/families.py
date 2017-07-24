@@ -10,9 +10,11 @@ import numpy as np
 import pymc3.distributions as pm_dists
 import pandas as pd
 from copy import copy
+from . import likelihoods
+from .likelihoods import *
+#from .likelihoods import ExtremeValue_Censored
 from pymc3.model import modelcontext
 FLOAT_EPS = np.finfo(float).eps
-from . import likelihoods
 
 class Family(object):
     """Base class for Family of likelihood distribution
@@ -99,13 +101,13 @@ class Weibull(Family):
     parent = 'indep'#parameter that links the indep component to the
     priors = {'alpha': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
 
-class Extreme_Value(Family):
+#class Extreme_Value(Family):
     # Weibull survival likelihood, accounting for censoring
     ## need to define this as likelihood
-    link = tt.exp
-    likelihood = ExtremeValue_Censored
-    parent = 'indep'#parameter that links the indep component to the
-    priors = {'alpha': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
+#    link = tt.exp
+#    likelihood = ExtremeValue_Censored
+#    parent = 'indep'#parameter that links the indep component to the
+#    priors = {'alpha': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
 
 class Weibull_PH(Family):
     # Weibull survival likelihood, accounting for censoring

@@ -25,7 +25,10 @@ from pymc3 import distributions as pm_dists
 FLOAT_EPS = np.finfo(float).eps
 import pymc3 as pm
 
+from . import likelihoods
 from . import families
+
+
 
 __all__ = [
     'IndependentComponent',
