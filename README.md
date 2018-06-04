@@ -1,27 +1,19 @@
-# bayleaf 
+# bayleaf
 BAYesian Lifetime Event Analysis Framework
-`bayleaf` is a Python package for Bayesian survival analysis using [PyMC3](https://github.com/pymc-devs/pymc3).
+
 ### [Currently Under Construction]
 
-Features 
+bayleaf is a Python package for Bayesian survival analysis using [PyMC3](https://github.com/pymc-devs/pymc3).
+
+Features
 ========
-`bayleaf` includes ("imp": implemented and pushed, "comp": completed and about to be pushed, : "ip": in progress):
--  Univariate Models: 
-    1. Parametric: Weibull (imp), Exponential (imp), Extreme Value (imp)
-    2. Semi-parametric: Piecewise hazard (comp) with Poisson Approximation
--  Multivariate Models: Parametric and Semi-Parametric Frailty Models
-    1. Gamma Frailty Model with Weibull Baseline Hazard (comp)
--  Transformation Models:
-    1. Transformed Weibull (comp)
-    2. Transformed Piecewise Hazard (comp)
--  Flexible Survival Models: 
-    1. Gaussian Process Survival Models (ip)
-    2. Spline Regression Survival Models (comp)
+`bayleaf` will include:
+-  Univariate Models: Parametric and Semi-Parametric Survival Models
+-  Multivariate Models: Parametric and Semi-Parametric Frailty and Copula Models
+-  Transformation Models
+-  Flexible Survival Models: Spline Regression Survival Models
 -  Intuitive model specification syntax
 -  Simulation functions from a general class of survival models
-    1. Univariate Proportional Hazards with exponential censoring: Weibull (imp), Exponential (imp)
-    2. Univariate Transformation Models (imp)
-    3. Multivariate Transformation Frailty data (imp)
 -  With a PyMC3 backend, bayleaf models leverage modern Bayesian computation including:
    1. **Markov Chain Monte Carlo**, such as the [No U-Turn Sampler](http://www.jmlr.org/papers/v15/hoffman14a.html)
     2. **Variational inference**: [Automatic Differentiation Variational Inference](http://www.jmlr.org/papers/v18/16-107.html)

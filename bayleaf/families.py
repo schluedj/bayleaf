@@ -120,3 +120,78 @@ class Weibull_PH(Family):
     parent = 'indep'#parameter that links the indep component to the
     priors = {'lam': pm_dists.HalfCauchy.dist(beta=2.5, testval=1.),
               'alpha':pm_dists.HalfCauchy.dist(beta=2.5, testval=1.)}
+
+
+
+#### Multivariate Models
+#### Copulas
+class CopulaFamily(object):
+    """Base class for Family of likelihood distribution
+    This is a hack from pymc3 GLM
+    """
+    priors = {}
+    link = None
+
+    def __init__(self, **kwargs):
+        # Overwrite defaults
+        for key, val in kwargs.items():
+            if key == 'priors':
+                self.priors = copy(self.priors)
+                self.priors.update(val)
+            else:
+                setattr(self, key, val)
+
+    def _get_priors(self, model=None, name=''):
+        """Return prior distributions of the likelihood.
+        Returns
+        -------
+        dict : mapping name -> pymc3 distribution
+        """
+        if name:
+            name = '{}_'.format(name)
+        model = modelcontext(model)
+        priors = {}
+        for key, val in self.priors.items():
+            if isinstance(val, numbers.Number):
+                priors[key] = val
+            else:
+                priors[key] = model.Var('{}{}'.format(name, key), val)
+
+        return priors
+
+    def create_likelihood(self, name, indep_1, indep_2, time_1, time_2,
+                          e_1, e_2, model=None):
+        """Create likelihood distribution of observed data.
+        Parameters
+        ----------
+        """
+        priors = self._get_priors(model=model, name=name)
+        priors[self.parent_1] = indep_1
+        priors[self.parent_2] = indep_2
+        if name:
+            name = '{}_'.format(name)
+        return self.likelihood('{}y'.format(name), observed={"time_1":time_1, "time_2":time_2,'delta_1':e_1, 'delta_2': e_2}, **priors)
+
+    def __repr__(self):
+        return """Family {klass}:
+    Likelihood   : {likelihood}({parent_1},{parent_2})
+    Priors       : {priors}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent_1 =self.parent_1, parent_2 = self.parent_2, priors=self.priors)
+
+################################################################################
+###################### Bivariate ############################
+##
+
+class Clayton_Trans(CopulaFamily):
+    # Weibull survival likelihood, accounting for censoring
+    ## need to define this as likelihood
+    likelihood = Clayton_Censored_Trans
+    parent_1 = 'indep_1'
+    parent_2 = 'indep_2'
+    #parameter that links the indep component to the
+    priors = {'alpha':pm_dists.HalfCauchy.dist(beta=5), #testval=1.),
+             'lam_1': pm_dists.HalfCauchy.dist(beta=2.5), #testval=.1),
+             'rho_1': pm_dists.HalfCauchy.dist(beta=2.5), #testval=.1),
+            'lam_2': pm_dists.HalfCauchy.dist(beta=2.5), #testval=.1),
+            'rho_2': pm_dists.HalfCauchy.dist(beta=2.5),
+             'r_1':pm_dists.HalfCauchy.dist(beta=2.5),
+             'r_2':pm_dists.HalfCauchy.dist(beta=2.5)} #testval=.1)}
