@@ -3,7 +3,7 @@
 ### Author: David Schlueter
 ### Vanderbilt University Department of Biostatistics
 ### Based on the GLM module in pymc3
-### June 2, 2018
+### July 12, 2018
 
 import theano.tensor as tt
 from pymc3.model import Model, Deterministic
@@ -35,7 +35,8 @@ __all__ = [
     'IndependentComponent',
     'ParSurv',
     'CopulaIndependentComponent',
-    'Copula'
+    'Copula',
+    'Frailty'
 ]
 ## Now we need to hack the from formula call
 class IndependentComponent(Model):
@@ -275,9 +276,162 @@ class Copula(CopulaIndependentComponent):
                                               model=self)
 
 
+# First need a frailty constructor
 
+class Frailty(Model):
+    """
+    General Class for transformation multivariate frailty model
+    Hack of pm.GLM.LinearComponent
+    Parameters
+    ----------
+    name : str - name, associated with the linear component
+    x : pd.DataFrame or np.ndarray
+    y : pd.Series or np.array
+    e: pd.Series or np.array
+    intercept : bool - fit with intercept or not?
+    labels : list - replace variable names with these labels
+    priors : dict - priors for coefficients
+        use `Intercept` key for defining Intercept prior
+            defaults to Flat.dist()
+        use `Regressor` key for defining default prior for all regressors
+            defaults to Normal.dist(mu=0, tau=1.0E-6)
+    vars : dict - random variables instead of creating new ones
+    """
+    # First thing we need to do is define default priors for the model parameters
+    default_regressor_prior = Normal.dist(mu=0, tau=1/100)
+    default_lambda_prior = Gamma.dist(0.001,0.001, testval = 0.01)
+    default_rho_prior = Gamma.dist(0.001,0.001,  testval = 0.01)
+    default_r_prior = InverseGamma.dist(alpha =1.,  testval = 0.01)
+    default_theta_prior = Gamma.dist(0.001,0.001,  testval = 0.01)
+    def __init__(self,
+                 time,
+                 event,
+                 x, labels=None,
+                 priors=None, vars=None, name='', model=None):
+        super(Frailty, self).__init__(name, model)
+        if priors is None:
+            priors = {}
+        if vars is None:
+            vars = {}
 
+        ### first thing to do is to get the dimension of the times
+        k = event.shape[1]
+        p = time.shape[1]# number of covariates
+        # we need 2 sets of these
+        x, labels = any_to_tensor_and_labels(x, labels)
 
+        # now we have x, shape and labels
+        self.x = x
+        # init a list to store all of the parameters that go into our likelihood
+        coeffs_all = list()
+        lams = list()
+        rhos = list()
+        rs = list()
+        for level in range(k): # for each dimension, instantiate a covariate effect for each predictor
+
+            labels_this = [s + "_"+str(level) for s in labels]
+
+            coeffs_this = list()
+            for name in labels_this:
+                if name in vars:
+                    v = Deterministic(name, vars[name])
+                else:
+                    v = self.Var(
+                        name=name,
+                        dist=priors.get(
+                            name,
+                            priors.get(
+                                'Regressor',
+                                self.default_regressor_prior
+                            )
+                        )
+                    )
+                coeffs_this.append(v)
+            coeffs_this = tt.stack(coeffs_this, axis=0)
+            coeffs_all.append(coeffs_this)
+
+            ### Now for the baseline hazard portions
+
+            lam_name = 'lam_'+str(level)
+            lam = self.Var(
+                name = lam_name,
+                dist = priors.get(lam_name,
+                                  priors.get('lam', self.default_lambda_prior)
+                                 )
+            )# create labels for the lambdas
+            lams.append(lam)
+            # rhos
+            rho_name = 'rho_'+str(level)
+            rho = self.Var(
+                name = rho_name,
+                dist = priors.get(rho_name,
+                                  priors.get('rho', self.default_rho_prior)
+                                 )
+            )
+            rhos.append(rho)
+            # finally, transformation parameters r
+            r_name = 'r_'+str(level)
+            r = self.Var(
+                name = r_name,
+                dist = priors.get(r_name,
+                                  priors.get('r', self.default_r_prior)
+                                 )
+            )
+            rs.append(r)
+
+        # Finally, the frailty is theta
+        theta = self.Var(
+                name = 'theta',
+                dist = priors.get('theta',
+                                  priors.get('Theta', self.default_theta_prior)
+                                 ))
+
+        self.coeffs_all = coeffs_all
+        self.linear = linear = tt.dot(coeffs_all,x.T).T#
+        self.lams = lams = tt.stack(lams, axis = 0)
+        self.rhos = rhos = tt.stack(rhos, axis =0)
+        self.rs = rs = tt.stack(rs, axis =0)
+        #other secondary processing
+        event_change = np.array([np.append(np.repeat(1, s), np.repeat(0, k-s)).tolist() for s in np.sum(event, axis = 1)])
+
+        def logp(δ, δ2, τ):
+            gamma_frac = tt.dot(δ2, tt.log(theta**(-1) + tt.arange(k)))
+            #linear = tt.dot(β,X.T).T# this is the correct formulation
+            weib_base_haz = lams*rhos*τ**(rhos-1) #weib haz
+            weib_base_cumhaz = lams*τ**(rhos)  # cumulative ha
+            φ_1 = tt.log(weib_base_haz*np.exp(linear))
+            φ_2 = tt.log((1+rs*weib_base_cumhaz*np.exp(linear)))
+            failed_component = tt.sum(δ*φ_1, axis = 1)-tt.sum(δ*φ_2, axis = 1)
+            ψ = tt.log(tt.sum(tt.log(1+rs*weib_base_cumhaz*tt.exp(linear))/rs,axis=1)+theta**(-1))
+                        # second component for all the censored observations
+            one_k = tt.ones(k)
+            second = (theta**(-1)+tt.dot(δ, one_k))*ψ
+                # define log likelihood
+            return gamma_frac + failed_component + theta**(-1)*tt.log(theta**(-1)) - second
+
+        survival = pm.DensityDist('survival', logp, observed={'δ':event,
+                                                          'δ2':event_change,
+                                                          'τ': time})
+
+    @classmethod
+    def from_formula(cls, formula, data, priors=None,
+                     vars=None, name='', model=None):
+        import patsy
+
+        outcomes= formula.split("~")[0]
+        # get time variables
+        time_vars = [v.strip() for v in outcomes[outcomes.find("([")+2:outcomes.find("]")].split(",")]
+        #get event times
+        event_raw = outcomes[outcomes.find("],")+2:]
+        event_vars = [v.strip() for v in event_raw[event_raw.find("[")+1:event_raw.find("])")].split(",")]
+        # Now get x, times, and events
+        x = patsy.dmatrix(formula.split("~")[1].strip(), data)
+        time = data[time_vars].as_matrix()
+        event = data[event_vars].as_matrix()
+        labels = x.design_info.column_names
+        return cls(x=np.asarray(x), time=time, event=event,labels=labels,
+                   priors=priors, vars=vars, name=name, model=model)
 
 parsurv = ParSurv
 copula = Copula
+frailty = Frailty
