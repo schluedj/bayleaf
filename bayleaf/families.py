@@ -195,3 +195,95 @@ class Clayton_Trans(CopulaFamily):
             'rho_2': pm_dists.HalfCauchy.dist(beta=2.5),
              'r_1':pm_dists.HalfCauchy.dist(beta=2.5),
              'r_2':pm_dists.HalfCauchy.dist(beta=2.5)} #testval=.1)}
+    
+    
+#### Frailty stuff
+
+
+
+### Finally, we have the interplay between the Family and the Likelihoods
+class FrailtyFamily(object):
+    """Base class for Family of likelihood distribution
+    This is a hack from pymc3 GLM
+    """
+    priors = {}
+    link = None
+
+    def __init__(self, **kwargs):
+        # Overwrite defaults
+        for key, val in kwargs.items():
+            if key == 'priors':
+                self.priors = copy(self.priors)
+                self.priors.update(val)
+            else:
+                setattr(self, key, val)
+
+    def _get_priors(self, model=None, name=''):
+        """Return prior distributions of the likelihood.
+        Returns
+        -------
+        dict : mapping name -> pymc3 distribution
+        """
+        if name:
+            name = '{}_'.format(name)
+        model = modelcontext(model)
+        priors = {}
+        for key, val in self.priors.items():
+            if isinstance(val, numbers.Number):
+                priors[key] = val
+            else:
+                priors[key] = model.Var('{}{}'.format(name, key), val)
+
+        return priors
+
+    def create_likelihood(self, name, coeffs_all, theta, rhos, lams, rs, time, event, event_change, x, total_size,k, model=None):
+        """Create likelihood distribution of observed data.
+        Parameters
+        ----------
+        """
+        priors = self._get_priors(model=model, name=name)
+        priors[self.parent_1] = coeffs_all
+        priors[self.parent_2] = theta
+        priors[self.parent_3] = rhos
+        priors[self.parent_4] = lams
+        priors[self.parent_5] = rs
+        
+        
+        
+        if name:
+            name = '{}_'.format(name)
+            
+        ## new
+        ### Here's where we pass the minibatch generator if we want minibatch advi 
+        ## assume minibatch corresponds to minibatch size
+        # if a minibatch, we need the total size
+        if str(time) == 'Minibatch':
+            return self.likelihood('{}y'.format(name), observed={"time":time,'delta_1': event, 'delta_2': event_change, 'x': x}, total_size = total_size, k=k, **priors)
+        else:
+            return self.likelihood('{}y'.format(name), observed={"time":time,'delta_1': event, 'delta_2': event_change, 'x': x},k=k, **priors)
+
+    def __repr__(self):
+        return """Family {klass}:
+    Likelihood   : {likelihood}({parent_1},{parent_2},{parent_3},{parent_4},{parent_5})
+    Priors       : {priors}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent_1 =self.parent_1,
+                                       parent_2 =self.parent_2,
+                                       parent_3 =self.parent_3,
+                                       parent_4 =self.parent_4,
+                                       parent_5 =self.parent_5,
+                                       priors=self.priors)
+##### Frailty family 
+class GammaFrailty(FrailtyFamily):
+    # Weibull survival likelihood, accounting for censoring
+    ## need to define this as likelihood
+    likelihood = Gamma_Frailty
+    parent_1 = 'coeffs_all'
+    parent_2 = 'theta'
+    parent_3 = 'rhos'
+    parent_4 = 'lams'
+    parent_5 = 'rs'
+    #parameter that links the indep component to the
+    #priors = {'theta':pm_dists.HalfCauchy.dist(beta=5) #testval=1.),
+     #        } #testval=.1)}
+
+
+

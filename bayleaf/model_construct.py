@@ -1,4 +1,3 @@
-
 ### Functions to build models storage for bayleaf
 ### Author: David Schlueter
 ### Vanderbilt University Department of Biostatistics
@@ -7,11 +6,12 @@
 
 import theano.tensor as tt
 from pymc3.model import Model, Deterministic
-from pymc3.distributions import Normal, Flat, transforms, Bound
+from pymc3.distributions import Normal, Flat, transforms, Bound, Gamma, InverseGamma
 from pymc3.glm.utils import any_to_tensor_and_labels
 import warnings
 import inspect
 import numpy as np
+import theano
 from scipy import special
 from pymc3.glm import families
 import pymc3.distributions as pm_dists
@@ -29,12 +29,11 @@ import pymc3 as pm
 from .likelihoods import *
 from .families import *
 
-
-
 __all__ = [
     'IndependentComponent',
     'ParSurv',
-    'CopulaIndependentComponent',
+    'CopulaIndependentComponent'
+    'FrailtyIndependentComponent',
     'Copula',
     'Frailty'
 ]
@@ -256,6 +255,7 @@ class CopulaIndependentComponent(Model):
 
 class Copula(CopulaIndependentComponent):
     """
+    This is a hack of the glm module in pymc3.
     """
     def __init__(self, time_1, time_2, e_1, e_2, x, family = "clayton",labels=None,
                  priors=None, vars=None, name='', model=None):
@@ -265,7 +265,6 @@ class Copula(CopulaIndependentComponent):
 
         _families = dict(
             ## This refers to a specific class of superclass Family
-            clayton = Clayton,
             clayton_trans = Clayton_Trans
         )
         if isinstance(family, str):
@@ -278,7 +277,166 @@ class Copula(CopulaIndependentComponent):
 
 # First need a frailty constructor
 
-class Frailty(Model):
+#class Frailty(Model):
+#    """
+#    General Class for transformation multivariate frailty model
+#    Hack of pm.GLM.LinearComponent
+#    Note that this Comes from the author's dissertation, paper forthcoming
+#    Parameters
+#    ----------
+#    name : str - name, associated with the linear component
+#    x : pd.DataFrame or np.ndarray
+#    y : pd.Series or np.array
+#    e: pd.Series or np.array
+#    intercept : bool - fit with intercept or not?
+#    labels : list - replace variable names with these labels
+#    priors : dict - priors for coefficients
+#        use `Intercept` key for defining Intercept prior
+#            defaults to Flat.dist()
+#        use `Regressor` key for defining default prior for all regressors
+#            defaults to Normal.dist(mu=0, tau=1.0E-6)
+#    vars : dict - random variables instead of creating new ones
+#    """
+#    # First thing we need to do is define default priors for the model parameters
+#    default_regressor_prior = pm.Normal.dist(mu=0, tau=1/100)
+#    default_lambda_prior = pm.Gamma.dist(1,0.001, testval = 0.01)
+#    default_rho_prior = pm.Gamma.dist(1,0.001,  testval = 0.01)
+#    default_r_prior = pm.InverseGamma.dist(alpha =1.,  testval = 0.01)
+#    default_theta_prior = pm.Gamma.dist(1.,0.001,  testval = 0.01)
+#    def __init__(self,
+#                 time,
+#                 event,
+#                 x, labels=None,
+#                 priors=None, vars=None, name='', model=None):
+#        super(Frailty, self).__init__(name, model)
+#        if priors is None:
+#            priors = {}
+#        if vars is None:
+#            vars = {}
+#
+#        ### first thing to do is to get the dimension of the times
+#        k = event.shape[1]
+#        p = time.shape[1]# number of covariates
+#        # we need 2 sets of these
+#        x, labels = any_to_tensor_and_labels(x, labels)
+#
+#        # now we have x, shape and labels
+#        self.x = x
+#        # init a list to store all of the parameters that go into our likelihood
+#        coeffs_all = list()
+#        lams = list()
+#        rhos = list()
+#        rs = list()
+#        for level in range(k): # for each dimension, instantiate a covariate effect for each predictor
+#
+#            labels_this = [s + "_"+str(level) for s in labels]
+#
+#            coeffs_this = list()
+#            for name in labels_this:
+#                if name in vars:
+#                    v = Deterministic(name, vars[name])
+#                else:
+#                    v = self.Var(
+#                        name=name,
+#                        dist=priors.get(
+#                            name,
+#                            priors.get(
+#                                'Regressor',
+#                                self.default_regressor_prior
+#                            )
+#                        )
+#                    )
+#                coeffs_this.append(v)
+#            coeffs_this = tt.stack(coeffs_this, axis=0)
+#            coeffs_all.append(coeffs_this)
+#
+#            ### Now for the baseline hazard portions
+#
+#            lam_name = 'lam_'+str(level)
+#            lam = self.Var(
+#                name = lam_name,
+#                dist = priors.get(lam_name,
+#                                  priors.get('lam', self.default_lambda_prior)
+#                                 )
+#            )# create labels for the lambdas
+#            lams.append(lam)
+#            # rhos
+#            rho_name = 'rho_'+str(level)
+#            rho = self.Var(
+#                name = rho_name,
+#                dist = priors.get(rho_name,
+#                                  priors.get('rho', self.default_rho_prior)
+#                                 )
+#            )
+#            rhos.append(rho)
+#            # finally, transformation parameters r
+#            r_name = 'r_'+str(level)
+#            r = self.Var(
+#                name = r_name,
+#                dist = priors.get(r_name,
+#                                  priors.get('r', self.default_r_prior)
+#                                 )
+#            )
+#            rs.append(r)
+#
+#        # Finally, the frailty is theta
+#        theta = self.Var(
+#                name = 'theta',
+#                dist = priors.get('theta',
+#                                  priors.get('Theta', self.default_theta_prior)
+#                                 ))
+#
+#        self.coeffs_all = coeffs_all
+#        self.linear = linear = tt.dot(coeffs_all,x.T).T#
+#        self.lams = lams = tt.stack(lams, axis = 0)
+#        self.rhos = rhos = tt.stack(rhos, axis =0)
+#        self.rs = rs = tt.stack(rs, axis =0)
+#        #other secondary processing
+#        event_change = np.array([np.append(np.repeat(1, s), np.repeat(0, k-s)).tolist() for s in np.sum(event, axis = 1)])
+#
+#        def logp(δ, δ2, τ):
+#            gamma_frac = tt.dot(δ2, tt.log(theta**(-1) + tt.arange(k)))
+#            #linear = tt.dot(β,X.T).T# this is the correct formulation
+#            weib_base_haz = lams*rhos*τ**(rhos-1) #weib haz
+#            weib_base_cumhaz = lams*τ**(rhos)  # cumulative ha
+#            φ_1 = tt.log(weib_base_haz*np.exp(linear))
+#            φ_2 = tt.log((1+rs*weib_base_cumhaz*np.exp(linear)))
+#            failed_component = tt.sum(δ*φ_1, axis = 1)-tt.sum(δ*φ_2, axis = 1)
+#            ψ = tt.log(tt.sum(tt.log(1+rs*weib_base_cumhaz*tt.exp(linear))/rs,axis=1)+theta**(-1))
+#                        # second component for all the censored observations
+#            one_k = tt.ones(k)
+#            second = (theta**(-1)+tt.dot(δ, one_k))*ψ
+#                # define log likelihood
+#            return gamma_frac + failed_component + theta**(-1)*tt.log(theta**(-1)) - second
+#
+#        survival = pm.DensityDist('survival', logp, observed={'δ':event,
+#                                                          'δ2':event_change,
+#                                                          'τ': time})
+#
+#    @classmethod
+#    def from_formula(cls, formula, data, priors=None,
+#                     vars=None, name='', model=None):
+#        import patsy
+#
+#        outcomes= formula.split("~")[0]
+#        # get time variables
+#        time_vars = [v.strip() for v in outcomes[outcomes.find("([")+2:outcomes.find("]")].split(",")]
+#        #get event times
+#        event_raw = outcomes[outcomes.find("],")+2:]
+#        event_vars = [v.strip() for v in event_raw[event_raw.find("[")+1:event_raw.find("])")].split(",")]
+#        # Now get x, times, and events
+#        x = patsy.dmatrix(formula.split("~")[1].strip(), data)
+#        time = data[time_vars].as_matrix()
+#        event = data[event_vars].as_matrix()
+#        labels = x.design_info.column_names
+#        return cls(x=np.asarray(x), time=time, event=event,labels=labels,
+#                   priors=priors, vars=vars, name=name, model=model)
+
+
+###### Frailty model as of 10/22/2018
+
+# First need a frailty constructor
+class FrailtyIndependentComponent(Model):
     """
     General Class for transformation multivariate frailty model
     Hack of pm.GLM.LinearComponent
@@ -299,36 +457,84 @@ class Frailty(Model):
     """
     # First thing we need to do is define default priors for the model parameters
     default_regressor_prior = Normal.dist(mu=0, tau=1/100)
-    default_lambda_prior = Gamma.dist(0.001,0.001, testval = 0.01)
-    default_rho_prior = Gamma.dist(0.001,0.001,  testval = 0.01)
-    default_r_prior = InverseGamma.dist(alpha =1.,  testval = 0.01)
-    default_theta_prior = Gamma.dist(0.001,0.001,  testval = 0.01)
-    def __init__(self,
+    default_lambda_prior = Gamma.dist(0.001,0.001, testval = 1.)
+    default_rho_prior = Gamma.dist(0.001,0.001,  testval = 1.)
+    default_r_prior = InverseGamma.dist(alpha =1.,  testval = 1.)
+    default_theta_prior = Gamma.dist(0.001,0.001,  testval = 1.)
+    def __init__(self, 
                  time,
                  event,
-                 x, labels=None,
+                 x, minibatch = 1 ,labels=None,
                  priors=None, vars=None, name='', model=None):
-        super(Frailty, self).__init__(name, model)
+        
+        super(FrailtyIndependentComponent, self).__init__(name, model)
         if priors is None:
             priors = {}
         if vars is None:
             vars = {}
+            
+        ### first thing to do is determine whether we are working with tensors or np.matrices
+        
+        # if we are working with a matrix, we need to grab the value of the array that populates it 
 
-        ### first thing to do is to get the dimension of the times
-        k = event.shape[1]
-        p = time.shape[1]# number of covariates
-        # we need 2 sets of these
-        x, labels = any_to_tensor_and_labels(x, labels)
-
+        if str(time) == '<TensorType(float64, matrix)>':             
+            data_tensor = True
+            self.k = k  = time.get_value().shape[1] # outcome dimentionality
+            self.n = n = time.get_value().shape[0] # total number of observations
+            self.p = p = x.get_value().shape[1] # number of covariates
+            
+        else:
+            
+            self.k = k = time.shape[1] # outcome dimentionality
+            self.n = n = time.shape[0] # total number of observations
+            self.p = p = x.shape[1] # number of covariates
+            
+        x, labels = any_to_tensor_and_labels(x, labels) # might need to do this for the other variables 
+        
+        ## now for secondary delta for the gamma frac
+        if data_tensor == True:
+            
+            # Create tensor variable for the gamma_frac component of the likelihood
+            
+            self.event_change = event_change = theano.shared(np.array([np.append(np.repeat(1, s), np.repeat(0, k-s)).tolist()\
+                                                                       for s in np.sum(event.get_value(), axis = 1)]), borrow = True)
+        else:
+            self.event_change = event_change = np.array([np.append(np.repeat(1, s), np.repeat(0, k-s)).tolist()\
+                                                         for s in np.sum(event, axis = 1)])
+        ## Keep track of total size of the dataset, for minibatching 
+        ## new 10.10.2018
+        # If minibatch, then we need the x component to be a generator and not just a tensor 
+        # by this step in the computation, X is already in tensor form 
+        if minibatch >= 2: # kinda hacky but whatever, we can fix this later 
+            minibatch = int(minibatch) #just in case some n00b puts in a double/float here 
+            x_mini = pm.Minibatch(data = x.get_value(), batch_size = minibatch) # make minibatch instance of the design matrix
+            time_mini = pm.Minibatch(data = time.get_value(), batch_size = minibatch) # minibatch instance of the time array
+            event_mini = pm.Minibatch(data = event.get_value(), batch_size = minibatch) # minibatch instance of the event array
+            event_change_mini = pm.Minibatch(data = event_change.get_value(), batch_size = minibatch) # minibatch instance of the transformed event array
+            
+            ## assign self. attributes to later parameterize the logp function 
+            
+            self.x = x_mini
+            self.time = time_mini
+            self.event = event_mini
+            self.event_change = event_change_mini
+            
+        else:
+            # if not minibatching, just pass the tensors as they are
+            self.x = x
+            self.time = time
+            self.event = event
+            self.event_change = event_change
+            
         # now we have x, shape and labels
-        self.x = x
+        
         # init a list to store all of the parameters that go into our likelihood
         coeffs_all = list()
         lams = list()
         rhos = list()
         rs = list()
         for level in range(k): # for each dimension, instantiate a covariate effect for each predictor
-
+            
             labels_this = [s + "_"+str(level) for s in labels]
 
             coeffs_this = list()
@@ -349,8 +555,8 @@ class Frailty(Model):
                 coeffs_this.append(v)
             coeffs_this = tt.stack(coeffs_this, axis=0)
             coeffs_all.append(coeffs_this)
-
-            ### Now for the baseline hazard portions
+            
+            ### Now for the baseline hazard portions 
 
             lam_name = 'lam_'+str(level)
             lam = self.Var(
@@ -378,46 +584,58 @@ class Frailty(Model):
                                  )
             )
             rs.append(r)
-
+            
         # Finally, the frailty is theta
         theta = self.Var(
                 name = 'theta',
                 dist = priors.get('theta',
                                   priors.get('Theta', self.default_theta_prior)
                                  ))
-
+            
         self.coeffs_all = coeffs_all
-        self.linear = linear = tt.dot(coeffs_all,x.T).T#
+        
+        # changing 10.18 
+        self.theta = theta
         self.lams = lams = tt.stack(lams, axis = 0)
-        self.rhos = rhos = tt.stack(rhos, axis =0)
-        self.rs = rs = tt.stack(rs, axis =0)
+        self.rhos = rhos = tt.stack(rhos, axis = 0)
+        self.rs = rs = tt.stack(rs, axis = 0)
         #other secondary processing
-        event_change = np.array([np.append(np.repeat(1, s), np.repeat(0, k-s)).tolist() for s in np.sum(event, axis = 1)])
+        ## changed 10/10/2018
+        
+        
+        
+        
+        
+class Frailty(FrailtyIndependentComponent):
+    """
+    """
+    def __init__(self, time, event, x, minibatch ='', family = 'gamma' ,labels=None,
+                 priors=None, vars=None, name='', model=None):
+        super(Frailty, self).__init__(time, event, x, minibatch, labels=labels,
+            priors=priors, vars=vars, name=name, model=model
+        )
+        
+        _families = dict(
 
-        def logp(δ, δ2, τ):
-            gamma_frac = tt.dot(δ2, tt.log(theta**(-1) + tt.arange(k)))
-            #linear = tt.dot(β,X.T).T# this is the correct formulation
-            weib_base_haz = lams*rhos*τ**(rhos-1) #weib haz
-            weib_base_cumhaz = lams*τ**(rhos)  # cumulative ha
-            φ_1 = tt.log(weib_base_haz*np.exp(linear))
-            φ_2 = tt.log((1+rs*weib_base_cumhaz*np.exp(linear)))
-            failed_component = tt.sum(δ*φ_1, axis = 1)-tt.sum(δ*φ_2, axis = 1)
-            ψ = tt.log(tt.sum(tt.log(1+rs*weib_base_cumhaz*tt.exp(linear))/rs,axis=1)+theta**(-1))
-                        # second component for all the censored observations
-            one_k = tt.ones(k)
-            second = (theta**(-1)+tt.dot(δ, one_k))*ψ
-                # define log likelihood
-            return gamma_frac + failed_component + theta**(-1)*tt.log(theta**(-1)) - second
+            gamma = GammaFrailty
+            
+        )
+        if isinstance(family, str):
+            family = _families[family]()
 
-        survival = pm.DensityDist('survival', logp, observed={'δ':event,
-                                                          'δ2':event_change,
-                                                          'τ': time})
-
+        self.y_est = family.create_likelihood(name='', coeffs_all=self.coeffs_all, 
+                                              rhos = self.rhos, 
+                                              lams = self.lams, 
+                                              rs =self.rs,
+                                              theta = self.theta,
+                                              time=self.time, event = self.event, event_change = self.event_change, x = self.x,
+                                              total_size = self.n,
+                                              k = self.k,
+                                              model=self)
     @classmethod
-    def from_formula(cls, formula, data, priors=None,
+    def from_formula(cls, formula, data, minibatch = False, priors=None,
                      vars=None, name='', model=None):
-        import patsy
-
+        import patsy        
         outcomes= formula.split("~")[0]
         # get time variables
         time_vars = [v.strip() for v in outcomes[outcomes.find("([")+2:outcomes.find("]")].split(",")]
@@ -429,8 +647,15 @@ class Frailty(Model):
         time = data[time_vars].as_matrix()
         event = data[event_vars].as_matrix()
         labels = x.design_info.column_names
-        return cls(x=np.asarray(x), time=time, event=event,labels=labels,
-                   priors=priors, vars=vars, name=name, model=model)
+        # add the data tensors to the computational graph
+        x_tensor = theano.shared(np.asarray(x)+0., borrow = True)
+        time_tensor = theano.shared(time+0., borrow = True)
+        event_tensor = theano.shared(event+0., borrow = True)
+  
+        return cls(x=x_tensor, time=time_tensor, event=event_tensor, minibatch=minibatch, labels=labels,
+                    priors=priors, vars=vars, name=name, model=model)
+
+
 
 parsurv = ParSurv
 copula = Copula
