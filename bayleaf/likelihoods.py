@@ -26,7 +26,6 @@ class Exponential_Censored(PositiveContinuous):
     ========  ====================================================
     Parameters
     ----------
-
     alpha : float
         For exponential model, set = 1 .
     """
@@ -136,13 +135,22 @@ class WeibullPH(PositiveContinuous):
 
 class Clayton_Censored(PositiveContinuous):
     """
-    ## we will modify this to include flexible specification of the baseline hazard, for now though we will just assume a weibull form i each dimension
     Bivariate Clayton Censored Model
     .. math::
     ========  ====================================================
     ========  ====================================================
     Parameters
     ----------
+    alpha: 
+        association parameter between dimensions
+    indep_1, indep_2: 
+        independent components, i.e. covariate effects
+    lam_1, lam2, rho_1, rho_2: 
+        >0 weibull baseline hazard parameters 
+    r_1, r_2: 
+        transformation parameters 
+
+    
     """
     def __init__(self, alpha, indep_1, indep_2, rho_1, lam_1, rho_2, lam_2,
                  *args, **kwargs):
@@ -222,14 +230,22 @@ class Clayton_Censored(PositiveContinuous):
 
 class Clayton_Censored_Trans(PositiveContinuous):
     """
-    ## we will modify this to include flexible specification of the baseline hazard, for now though we will just assume a weibull form i each dimension
-    Bivariate Clayton Censored Model
+    Bivariate Clayton Censored Copula Model
     ## This function comes from the author's dissertation. Paper forthcoming.
     .. math::
     ========  ====================================================
     ========  ====================================================
     Parameters
     ----------
+    alpha: 
+        association parameter between dimensions
+    indep_1, indep_2: 
+        independent components, i.e. covariate effects
+    lam_1, lam2, rho_1, rho_2: >0 
+        weibull baseline hazard parameters 
+    r_1, r_2: 
+        transformation parameters 
+
     """
     def __init__(self, alpha, indep_1, indep_2, rho_1, lam_1, rho_2, lam_2, r_1, r_2,
                  *args, **kwargs):
@@ -314,7 +330,6 @@ class Clayton_Censored_Trans(PositiveContinuous):
 
 class Joe_Censored_Trans(PositiveContinuous):
     """
-    ## we will modify this to include flexible specification of the baseline hazard, for now though we will just assume a weibull form i each dimension
     Bivariate Joe Censored Model
     ## This function comes from the author's dissertation. Paper forthcoming.
     .. math::
@@ -322,6 +337,15 @@ class Joe_Censored_Trans(PositiveContinuous):
     ========  ====================================================
     Parameters
     ----------
+    alpha: 
+        association parameter between dimensions
+    indep_1, indep_2: 
+        independent components, i.e. covariate effects
+    lam_1, lam2, rho_1, rho_2: 
+        >0 weibull baseline hazard parameters 
+    r_1, r_2: 
+        transformation parameters 
+    
     """
     def __init__(self, alpha, indep_1, indep_2, rho_1, lam_1, rho_2, lam_2, r_1, r_2,
                  *args, **kwargs):
@@ -410,13 +434,17 @@ class Joe_Censored_Trans(PositiveContinuous):
 
 class Frank_Censored_Trans(PositiveContinuous):
     """
-    ## we will modify this to include flexible specification of the baseline hazard, for now though we will just assume a weibull form i each dimension
-    Bivariate Joe Censored Model
+    Bivariate Frank Censored Copula Model
     .. math::
     ========  ====================================================
     ========  ====================================================
     Parameters
     ----------
+    alpha: association parameter between dimensions
+    indep_1, indep_2: independent components, i.e. covariate effects
+    lam_1, lam2, rho_1, rho_2: >0 weibull baseline hazard parameters 
+    r_1, r_2: transformation parameters 
+
     """
     def __init__(self, alpha, indep_1, indep_2, rho_1, lam_1, rho_2, lam_2, r_1, r_2,
                  *args, **kwargs):
@@ -504,7 +532,6 @@ class Frank_Censored_Trans(PositiveContinuous):
 
 class Gumbel_Censored_Trans(PositiveContinuous):
     """
-    ## we will modify this to include flexible specification of the baseline hazard, for now though we will just assume a weibull form i each dimension
     Bivariate Gumbel Censored Model
     ## This function comes from the Author's dissertation. Paper forthcoming.
     .. math::
@@ -512,6 +539,15 @@ class Gumbel_Censored_Trans(PositiveContinuous):
     ========  ====================================================
     Parameters
     ----------
+    alpha: 
+        association parameter between dimensions
+    indep_1, indep_2: 
+        independent components, i.e. covariate effects
+    lam_1, lam2, rho_1, rho_2: 
+        >0 weibull baseline hazard parameters 
+    r_1, r_2: 
+        transformation parameters 
+
     """
     def __init__(self, alpha, indep_1, indep_2, rho_1, lam_1, rho_2, lam_2, r_1, r_2,
                  *args, **kwargs):
@@ -597,11 +633,21 @@ class Gumbel_Censored_Trans(PositiveContinuous):
 
 class Gamma_Frailty(PositiveContinuous):
     """
-    ##
+    Likelihood for transformation Gamma frailty model 
     ========  ====================================================
     ========  ====================================================
     Parameters
     ----------
+    theta: 
+        gamma frailty parameter
+    coeffs_all: 
+        coefficients for covariate effects 
+    lams, rhos: 
+        >0 weibull baseline hazard parameters 
+    rs: 
+        transformation parameters
+    k: 
+        dimension of outcome
     """
     def __init__(self, theta, coeffs_all, rhos, lams, rs, k,
                  *args, **kwargs):
