@@ -378,7 +378,8 @@ class FrailtyIndependentComponent(Model):
         # by this step in the computation, X is already in tensor form 
         
         if minibatch >= 2: # kinda hacky but whatever, we can fix this later 
-            # If we're using mini-batch, then we have to tell the inner workings to fix the MAP estimate 
+            # If we're using mini-batch, then we have to tell the inner workings to fix the MAP estimate
+            print("We're Mini batching!")
             self.use_ADVI = True
             minibatch = int(minibatch) #just in case some n00b puts in a double/float here 
             x_mini = pm.Minibatch(data = x.get_value(), batch_size = minibatch) # make minibatch instance of the design matrix
@@ -572,8 +573,8 @@ class FrailtyIndependentComponent_Fix(Model):
     default_theta_prior = Gamma.dist(0.001,0.001,  testval = 1.)
     def __init__(self, 
                  time,
-                 event, rs,
-                 x, minibatch = 1 ,labels=None,
+                 event,
+                 x, rs, minibatch = 1 ,labels=None,
                  priors=None, vars=None, name='', model=None):
         
         super(FrailtyIndependentComponent_Fix, self).__init__(name, model)
@@ -583,7 +584,9 @@ class FrailtyIndependentComponent_Fix(Model):
             vars = {}
             
         ### first thing to do is determine whether we are working with tensors or np.matrices
+        ## Debugging
         
+        print(str(time))
         # if we are working with a matrix, we need to grab the value of the array that populates it 
 
         if str(time) == '<TensorType(float64, matrix)>':             
@@ -593,7 +596,7 @@ class FrailtyIndependentComponent_Fix(Model):
             self.p = p = x.get_value().shape[1] # number of covariates
             
         else:
-            
+            data_tensor = False
             self.k = k = time.shape[1] # outcome dimentionality
             self.n = n = time.shape[0] # total number of observations
             self.p = p = x.shape[1] # number of covariates
@@ -617,6 +620,7 @@ class FrailtyIndependentComponent_Fix(Model):
         # by this step in the computation, X is already in tensor form 
         
         if minibatch >= 2: # kinda hacky but whatever, we can fix this later 
+            print("We're Mini batching")
             # If we're using mini-batch, then we have to tell the inner workings to fix the MAP estimate 
             minibatch = int(minibatch) #just in case some n00b puts in a double/float here 
             x_mini = pm.Minibatch(data = x.get_value(), batch_size = minibatch) # make minibatch instance of the design matrix
@@ -726,7 +730,7 @@ class Frailty_FixMAP(FrailtyIndependentComponent_Fix):
     """
     def __init__(self, time, event, x, rs, minibatch ='', family = 'gamma' ,labels=None,
                  priors=None, vars=None, name='', model=None):
-        super(Frailty_FixMAP, self).__init__(time, event, x, minibatch, labels=labels,
+        super(Frailty_FixMAP, self).__init__(time, event, x, rs, minibatch, labels=labels,
             priors=priors, vars=vars, name=name, model=model
         )
         
@@ -749,6 +753,42 @@ class Frailty_FixMAP(FrailtyIndependentComponent_Fix):
                                               total_size = self.n,
                                               k = self.k,
                                               model=self)
+        
+    @classmethod
+    def from_formula(cls, formula, data, MAP, minibatch = False, priors=None,
+                     vars=None, name='', model=None):
+        import patsy        
+        
+        print(minibatch)
+        outcomes= formula.split("~")[0]
+        # get time variables
+        time_vars = [v.strip() for v in outcomes[outcomes.find("([")+2:outcomes.find("]")].split(",")]
+        #get event times
+        event_raw = outcomes[outcomes.find("],")+2:]
+        event_vars = [v.strip() for v in event_raw[event_raw.find("[")+1:event_raw.find("])")].split(",")]
+        # Now get x, times, and events
+        x = patsy.dmatrix(formula.split("~")[1].strip(), data)
+        time = data[time_vars].as_matrix()
+        event = data[event_vars].as_matrix()
+        labels = x.design_info.column_names
+        # add the data tensors to the computational graph
+        x_tensor = theano.shared(np.asarray(x)+0., borrow = True)
+        time_tensor = theano.shared(time+0., borrow = True)
+        event_tensor = theano.shared(event+0., borrow = True)
+        k = time.shape[1]
+        print(k)
+        ## now save rs
+        rs2 = list()
+        for level in range(k): # for each dimension, instantiate a covariate effect for each predictor
+        # finally, transformation parameters r
+            r_name = 'r_'+str(level)
+            r = MAP[r_name]
+            rs2.append(r)
+        # convert to tensor 
+        rs2_tensor = theano.shared(np.array(rs2)+0., borrow = True)
+        return cls(x=x_tensor, time=time_tensor, event=event_tensor, minibatch=minibatch, labels=labels,
+                    priors=priors, vars=vars, name=name, model=model, rs = rs2_tensor)
+
         
         
         
