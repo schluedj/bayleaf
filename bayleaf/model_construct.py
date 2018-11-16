@@ -759,7 +759,6 @@ class Frailty_FixMAP(FrailtyIndependentComponent_Fix):
                      vars=None, name='', model=None):
         import patsy        
         
-        print(minibatch)
         outcomes= formula.split("~")[0]
         # get time variables
         time_vars = [v.strip() for v in outcomes[outcomes.find("([")+2:outcomes.find("]")].split(",")]
@@ -776,7 +775,6 @@ class Frailty_FixMAP(FrailtyIndependentComponent_Fix):
         time_tensor = theano.shared(time+0., borrow = True)
         event_tensor = theano.shared(event+0., borrow = True)
         k = time.shape[1]
-        print(k)
         ## now save rs
         rs2 = list()
         for level in range(k): # for each dimension, instantiate a covariate effect for each predictor
@@ -786,6 +784,19 @@ class Frailty_FixMAP(FrailtyIndependentComponent_Fix):
             rs2.append(r)
         # convert to tensor 
         rs2_tensor = theano.shared(np.array(rs2)+0., borrow = True)
+        
+        print("================================================================")
+        print("Formula Call: " + formula )
+        print("Dimension of Outcome Variable: " + str(k))
+        print("Covariates in Model: " + str(x.design_info.column_names))
+        ## Percent Censoring
+        print("Percent Censored in Each Direction:") 
+        percs = 1 - np.sum(event, axis = 0)/x.shape[0]
+        for level in range(k):
+            print(str(time_vars[level]) +": " + str(percs[level]))
+        print("Minibatch Size: " + str(minibatch))
+        print("================================================================")
+
         return cls(x=x_tensor, time=time_tensor, event=event_tensor, minibatch=minibatch, labels=labels,
                     priors=priors, vars=vars, name=name, model=model, rs = rs2_tensor)
 
